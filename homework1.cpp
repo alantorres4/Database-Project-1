@@ -16,7 +16,7 @@ ofstream DoutData;
 ifstream DinTest;
 ifstream DinData;
 
-// 'string OTHER' is TEMPORARY FOR NOW, TAKES THE 'TYPE' AND 'NAME' AS ONE WHOLE VARIABLE
+// 'string OTHER' is TEMPORARY FOR NOW, TAKES THE 'TYPE' AND 'NAME' AS ONE WHOLE VARIABLE bc stuff broke 
 string OTHER;
 
 string csvConfigFile;
