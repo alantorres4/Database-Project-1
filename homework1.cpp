@@ -13,11 +13,13 @@ bool OPEN_DATABASE = false;
 ifstream Din;
 ofstream DoutConfig;
 ofstream DoutData;
+
+// TesT only
 ifstream DinTest;
 ifstream DinData;
-
-// 'string OTHER' is TEMPORARY FOR NOW, TAKES THE 'TYPE' AND 'NAME' AS ONE WHOLE VARIABLE bc stuff broke 
 string OTHER;
+ofstream DinDoutData;
+
 
 string csvConfigFile;
 string csvDataFile;
@@ -33,23 +35,20 @@ string VISITORS;
 
 int numberOfFiles;
 
-const int TOTAL_MAX = 157; // the total number of characters each line should have
+const int TOTAL_MAX = 157;
 
-// this is where I have the max length that each field should have
 const int ID_MAX = 8;
 const int REGION_MAX = 3;
 const int STATE_MAX = 3;
 const int CODE_MAX = 5;
-const int NAMES_MAX = 86;
-const int TYPE_MAX = 40; 
-const int VISITORS_MAX = 12; 
+const int NAMES_MAX = 85; // + 3 - 1 // used to be 86, changing to 85 bc im adding '!' before each Name in .data file
+const int TYPE_MAX = 40; //  + 3
+const int VISITORS_MAX = 12; // + 3
 
-string BLANK_RECORD = "                                                                                                                                                             "; // this SHOULD be 157 characters of white space
+string BLANK_RECORD = "                                                                                                                                                             ";
 
-int ID_RECORD; // used for displayRecord()
-
-
-
+int ID_RECORD;
+int MIDDLE_INT;
 
 void padRecords(string &ID, string &REGION, string &STATE, string &CODE, string &NAME, string &TYPE, string &VISITORS){
         int appendNum;
@@ -101,12 +100,11 @@ void createDatabase(){
         csvDataFile = csvFile + ".data";
         csvFinal = csvFile + ".csv";
 
-        // HERE WE OPEN OUR FILES
         DoutConfig.open(csvConfigFile);
         DoutData.open(csvDataFile);
         Din.open(csvFinal);
 
-        // THIS IS WHERE WE ADD INFO TO OUR .CONFIG FILE
+        // CONFIG FILE
         string firstLine;
         string headers;
 
@@ -137,44 +135,109 @@ void createDatabase(){
             string fields;
 
             getline(Din, currentLine);
-            stringstream s(currentLine);
+/////////////////// here we check if the currentLine string has any quotation marks. If so we will treat it differently./////////////////////////
+            vector<string> fieldsVector;
+            string quotationMark = "\"";
 
-            while(getline(s, fields, ',')){
-                FieldValues.push_back(fields);
+            if(currentLine.find(quotationMark) != std::string::npos){
+                int i = 0;
+                string currentField;
+
+                // get first 3 fields
+                while(currentLine[i] != '\"'){
+                    while(currentLine[i] != ','){
+                        currentField = currentField + currentLine[i];
+                        i = i + 1;
+                    }
+                    fieldsVector.push_back(currentField);
+                    currentField = "";
+                    i = i + 1;
+                }
+
+                // GET NAME
+                i = i + 1;
+                currentField = currentField + '\"';
+                while(currentLine[i] != '\"'){
+                    currentField = currentField + currentLine[i];
+                    i = i + 1;
+                }
+                currentField = currentField + '\"';
+                fieldsVector.push_back(currentField);
+                currentField = "";
+
+
+                i = i + 2;
+                // now get the other two fields that are left
+                while(currentLine[i] != '\0'){
+                    while(currentLine[i] != ','){
+                        currentField = currentField + currentLine[i];
+                        i = i + 1;
+                        if(currentLine[i] == '\0')
+                            break;
+                    }
+                    fieldsVector.push_back(currentField);
+                    currentField = "";
+                    i = i + 1;
+                }
+                ID = fieldsVector[0];
+                REGION = fieldsVector[1];
+                STATE = fieldsVector[2];
+                CODE = fieldsVector[3];
+                NAME = fieldsVector[4];
+                TYPE = fieldsVector[5];
+                VISITORS = fieldsVector[6];
+                fieldsVector.clear();
             }
+            else {
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-            ID = FieldValues[0];
-            REGION = FieldValues[1];
-            STATE = FieldValues[2];
-            CODE = FieldValues[3];
-            NAME = FieldValues[4];
-            TYPE = FieldValues[5];
-            VISITORS = FieldValues[6];
+                stringstream s(currentLine);
 
+                while(getline(s, fields, ',')){
+                    FieldValues.push_back(fields);
+                }
+
+                ID = FieldValues[0];
+                REGION = FieldValues[1];
+                STATE = FieldValues[2];
+                CODE = FieldValues[3];
+                NAME = FieldValues[4];
+                TYPE = FieldValues[5];
+                VISITORS = FieldValues[6];
+
+                FieldValues.clear();
+            }
         // Here we will add ' 's to each field
             padRecords(ID, REGION, STATE, CODE, NAME, TYPE, VISITORS);
 
 
-        // DoutData into the .data file and add a blank record to the next line
-            DoutData << ID << REGION << STATE << CODE << VISITORS << TYPE << NAME << endl << BLANK_RECORD << endl;
+        // DoutData into the .data file
+            DoutData << ID << REGION << STATE << CODE << VISITORS << TYPE << "!" << NAME << endl << BLANK_RECORD << endl;
 
             currentLine = "";
-            FieldValues.clear();
-            numberOfFiles = numberOfFiles + 1; // here we keep track of the number of real records to add to our .CONFIG file
+            numberOfFiles = numberOfFiles + 1;
         }
 
         // .data file is being wierd and display two extra ghostly data records, so just subtract two from numberOfFiles
         numberOfFiles = numberOfFiles - 2;
 
-        DoutConfig << numberOfFiles; // here we add the real record number to our config file
+        DoutConfig << numberOfFiles;
+
+        DoutConfig.close();
+
         OPEN_DATABASE = true;
-        prefixName = csvFile; // this is as if you had done openDatabase() on the freshly made files.
+        prefixName = csvFile; // this is as if you had done openDatabase on the freshly made files.
     }
     else
         cout << "\n - [Please close your current database first before creating a new one]\n";
 }
 
+
+
 void openDatabase(){
+    // TODO
+
+
     if (!OPEN_DATABASE){
         cout << "\n [] What's the prefix for your file? (Exclude extension, e.g., 'Parks')\n";
         cin >> prefixName;
@@ -192,13 +255,12 @@ void openDatabase(){
             DoutData.open(csvDataFile, std::ios_base::app);
             Din.open(csvFinal);
 
-            // I JUST DIN'd THE FIRST AND SECOND LINE SEPARATELY AND IGNORED THE FIRST LINE of the config file
             string test;
             string test2;
             DinTest >> test;
             DinTest >> test2;
 
-            numberOfFiles = stoi(test2); // STOI() HAS SOME TROUBLE, I'M NOT TOO ENTIRELY SURE WHY...
+            numberOfFiles = stoi(test2);
             cout << " + NUMBER OF FILES: " << numberOfFiles << endl;
 
             DinTest.close();
@@ -215,6 +277,7 @@ void openDatabase(){
 
 
 void closeDatabase(){
+    // TODO
     if(!OPEN_DATABASE)
         cout << "\n - [No database currently open]\n";
     else{
@@ -227,19 +290,49 @@ void closeDatabase(){
     }
 }
 
+
+
 bool getRecord(ifstream &DinData, int ID_RECORD, const int middle, string &middleID){
     bool SUCCESS = false;
+    int i=0;
+    string TYPE_TEMP;
+    string NAME_TEMP;
+    OTHER = "";
+
+
+    // to skip the blank records, we have to do ID_RECORD*2 - 1
+//    ID_RECORD = ID_RECORD*2- 1;
     if((0 <= middle) && (middle < numberOfFiles)){
-        DinData.seekg(middle * TOTAL_MAX, ios::beg);
-        DinData >> ID >> REGION >> STATE >> CODE >> VISITORS;
+        DinData.seekg(2*middle * (TOTAL_MAX+1), ios::beg);
+
+        DinData >> ID;
+        if( !isdigit(stoi(ID)))
+//        cout << "----------------------------------BLANK------------------------------------------------";
+
+        DinData >> REGION >> STATE >> CODE >> VISITORS;
         getline(DinData, OTHER);
 
-        // THESE COUT's ARE USED FOR TESTING PURPOSES- to see where stuff breaks 
-        // cout << "      ID = " << ID << "\n      REGION = " << REGION << "\n      STATE = " << STATE << "\n      CODE = " << CODE << "\n      VISITORS = " << VISITORS << "\n      OTHER: " << OTHER  << endl << endl;
-        // cout << "      MIDDLE: " << middle << endl;
+        while(OTHER[i] == ' ')
+            i = i + 1;
+
+        while(OTHER[i] != '!'){
+            TYPE_TEMP = TYPE_TEMP + OTHER[i];
+            i = i + 1;
+        }
+
+        TYPE = TYPE_TEMP;
+
+        i = i + 1;
+        while(OTHER[i] != '\0'){
+            NAME_TEMP = NAME_TEMP + OTHER[i];
+            i = i + 1;
+        }
+
+        NAME = NAME_TEMP;
+
+//      cout << "      MIDDLE: " << middle << endl;
+//      cout << "      ID = " << ID << "\n      REGION = " << REGION << "\n      STATE = " << STATE << "\n      CODE = " << CODE << "\n      VISITORS = " << VISITORS << "\n      TYPE" << TYPE << "\n     $
         middleID = ID;
-        
-        
         SUCCESS = true;
     }
     else
@@ -248,10 +341,7 @@ bool getRecord(ifstream &DinData, int ID_RECORD, const int middle, string &middl
     return SUCCESS;
 }
 
-void displayRecord(){
-    cout << "Please enter ID for the record: ";
-    cin >> ID_RECORD;
-
+int binarySearch(int ID_RECORD){
 
     DinData.open(csvDataFile);
     // binary search part
@@ -272,17 +362,9 @@ void displayRecord(){
             }
             else if (stoi(middleID) < ID_RECORD){
                 low = middle + 1;
-
-                // THESE COUT's ARE USED FOR TESTING PURPOSES
-                // cout << " -> LOW" << endl;
-                // cout << "    ID_RECORD: " << ID_RECORD << endl;
             }
             else{
                 high = middle - 1;
-
-                // TESTING PURPOSES
-                // cout << " -> HIGH" << endl;
-                // cout << "    ID_RECORD: " << ID_RECORD << endl;
             }
         }
         else
@@ -292,23 +374,177 @@ void displayRecord(){
         }
     }
 
+    DinData.close();
+
     if (Found){
-        cout << "ID: " << ID_RECORD << " found at record " << middle << ": \n";
-        cout << "ID: " << ID_RECORD << "\nREGION: " << REGION << "\nSTATE: " << STATE << "\nCODE: " << CODE <<  "\nVISITORS: " << VISITORS  << "\nOTHER: " << OTHER << endl;
+//      MIDDLE_INT = ID_RECORD;
+        return middle;
+    }
+    else{
+        return -1;
+    }
+}
+
+void displayRecord(){
+    // You must find the record via the primary key using seeks and binary search, THEN display it
+    // Each field should display the name (from the .config file) and the value (from the .data file record)
+    cout << "Please enter ID for the record: ";
+    cin >> ID_RECORD;
+
+    int recordNum = binarySearch(ID_RECORD);
+
+    if (recordNum != -1){
+        cout << "\n  ID: " << ID_RECORD << " found at record " << recordNum << ": \n";
+        cout << "\n  REGION: " << REGION << "\n  STATE: " << STATE << "\n  CODE: " << CODE <<  "\n  VISITORS: " << VISITORS  << "\n  TYPE: " << TYPE << "\n  NAME: " << NAME << endl << endl;
     }
     else{
         cout << " - [Could not find record]\n";
     }
-    DinData.close();
+//    DinData.close();
 }
-
 
 void updateRecord(){
     // TODO
-    cout << "\n--updating record--\n";
     // As a first step, you have to find the record using the same "find" routine as 4
     // Then you should display the contents and allow updates in a specified field
     // DON'T allow the updating of the primary key
+    bool everythingGood = true;
+
+    int fieldChangeNum;
+    string newREGION = "TEST";
+    string newSTATE = "TEST";
+    string newCODE = "TEST";
+    string newVISITORS = "TEST";
+    string newTYPE = "TEST";
+    string newNAME = "TEST";
+
+    int tempInt;
+
+    cout << "Please enter ID for record you would like to update: ";
+    cin >> ID_RECORD;
+
+    int recordNum = binarySearch(ID_RECORD);
+    MIDDLE_INT = recordNum;
+
+    if(recordNum != -1){
+        cout << "\n  [1]  ID: " << ID << "\n  [2]  REGION: " << REGION << "\n  [3]  STATE: " << STATE << "\n  [4]  CODE: " << CODE << "\n  [5]  VISITORS: " << VISITORS << "\n  [6]  TYPE: " << TYPE << "\n  [7]  NAME: " << NAME << endl << endl;
+        cout << "Which field would you like to change? (Choose number from 2 to 7): ";
+        cin >> fieldChangeNum;
+        while((fieldChangeNum < 2) || (fieldChangeNum > 7)){
+            cout << "Please choose a number from 2 to 7: ";
+            cin >> fieldChangeNum;
+        }
+
+        switch(fieldChangeNum){
+            case 2:
+                cout << "Please enter new REGION name: ";
+                cin.ignore();
+                getline(cin, newREGION);
+
+                // if newREGION is larger than two letters, truncate down to two letters
+                tempInt = REGION_MAX - 1;
+                if(newREGION.length() > tempInt){
+                    string temp = newREGION.substr(0, tempInt);
+                    newREGION = temp;
+                }
+                REGION = newREGION;
+
+                // otherwise, newREGION is smaller than two letters so add whitespace later using padRecords
+                break;
+            case 3:
+                cout << "Please enter new STATE name: ";
+                cin.ignore();
+                getline(cin, newSTATE);
+
+                tempInt = STATE_MAX - 1;
+                if(newSTATE.length() > tempInt){
+                    string temp = newSTATE.substr(0, tempInt);
+                    newSTATE = temp;
+                }
+                STATE = newSTATE;
+
+                break;
+            case 4:
+                cout << "Please enter new CODE name: ";
+                cin.ignore();
+                getline(cin, newCODE);
+
+                tempInt = CODE_MAX - 1;
+                if(newCODE.length() > tempInt){
+                    string temp = newCODE.substr(0, tempInt);
+                    newCODE = temp;
+                }
+                CODE = newCODE;
+
+                break;
+            case 5:
+                cout << "Please enter new VISITORS name: ";
+                cin.ignore();
+                getline(cin, newVISITORS);
+
+                tempInt = VISITORS_MAX - 3;
+                if(newVISITORS.length() > tempInt){
+                    string temp = newVISITORS.substr(0, tempInt);
+                    newVISITORS = temp;
+                }
+                VISITORS = newVISITORS;
+
+                break;
+            case 6:
+                cout << "Please enter new TYPE name: ";
+                cin.ignore();
+                getline(cin, newTYPE);
+
+                tempInt = TYPE_MAX - 3;
+                if(newTYPE.length() > tempInt){
+                    string temp = newTYPE.substr(0, tempInt);
+                    newTYPE = temp;
+                }
+                TYPE = newTYPE;
+
+                break;
+
+            case 7:
+                cout << "Please enter new NAME name: ";
+                cin.ignore();
+                getline(cin, newNAME);
+
+                tempInt = NAMES_MAX - 2;
+                if(newNAME.length() > tempInt){
+                    string temp = newNAME.substr(0, tempInt);
+                    newNAME = temp;
+                }
+//              NAME = "!" + newNAME;
+
+                break;
+            default:
+                cout << " - [Something went wrong and we could not change that field value. Try again]\n";
+                everythingGood = false;
+                break;
+        }
+
+    if(everythingGood){
+        padRecords(ID, REGION, STATE, CODE, NAME, TYPE, VISITORS);
+        // so now the record is ready to go into .data file
+        // I guess we use seekg() with MIDDLE_INT as our position (of course multipying by our TOTAL_MAX record size value)
+        // then once we have our starting point we just write our new data there somehow....
+        DinDoutData.open(csvDataFile, ios::out | ios::in);
+        cout << "       MIDDLE: " << MIDDLE_INT << endl;
+        DinDoutData.seekp(MIDDLE_INT * TOTAL_MAX, ios::beg);
+        DinDoutData << ID << REGION << STATE << CODE << VISITORS << TYPE << "!" << NAME << endl;
+
+        cout << " + [Record successfully updated]\n";
+
+        DinDoutData.close();
+    }
+    else{
+        // do nothing
+    }
+
+    }
+    else
+        cout << " - [Could not find record]\n";
+
 }
 
 void createReport(){
@@ -332,7 +568,6 @@ void deleteRecord(){
     // As records are deleted, they are logically removed from the file (most likely just marked as "missing")
     // The "missing" records should be removed when the file is reorganized while reinserting blank records
 }
-
 
 int main(){
     cout << "\n\n============================\nNAME: Alan Torres\nID:  010840328\n----------------------------\n\n";
