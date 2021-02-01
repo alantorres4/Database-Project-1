@@ -515,6 +515,7 @@ void updateRecord(){
                     newNAME = temp;
                 }
 //              NAME = "!" + newNAME;
+                NAME = newNAME;
 
                 break;
             default:
@@ -529,8 +530,8 @@ void updateRecord(){
         // I guess we use seekg() with MIDDLE_INT as our position (of course multipying by our TOTAL_MAX record size value)
         // then once we have our starting point we just write our new data there somehow....
         DinDoutData.open(csvDataFile, ios::out | ios::in);
-        cout << "       MIDDLE: " << MIDDLE_INT << endl;
-        DinDoutData.seekp(MIDDLE_INT * TOTAL_MAX, ios::beg);
+//        cout << "       MIDDLE: " << MIDDLE_INT << endl;
+        DinDoutData.seekp(2*MIDDLE_INT * (1+TOTAL_MAX), ios::beg);
         DinDoutData << ID << REGION << STATE << CODE << VISITORS << TYPE << "!" << NAME << endl;
 
         cout << " + [Record successfully updated]\n";
@@ -549,8 +550,49 @@ void updateRecord(){
 
 void createReport(){
     // TODO
-    cout << "\n--creating report--\n";
     // This should create a "human" readable file in ASCII form, which should display the first TEN records nicely formatted, in sorted order by primary key
+    string OTHER = "";
+    string TYPE_TEMP;
+    string NAME_TEMP;
+    int i = 0;
+
+    DinData.open(csvDataFile);
+    for(int j=0; j<10;j++){
+
+        TYPE_TEMP = "";
+        NAME_TEMP = "";
+
+        i = 0;
+        DinData.seekg(2*j * (TOTAL_MAX+1), ios::beg);
+        DinData >> ID;
+        if( !isdigit(stoi(ID)))
+//        cout << "----------------------------------BLANK------------------------------------------------";
+
+        DinData >> REGION >> STATE >> CODE >> VISITORS;
+        getline(DinData, OTHER);
+
+        while(OTHER[i] == ' ')
+            i = i + 1;
+
+        while(OTHER[i] != '!'){
+            TYPE_TEMP = TYPE_TEMP + OTHER[i];
+            i = i + 1;
+        }
+
+        TYPE = TYPE_TEMP;
+
+        i = i + 1;
+        while(OTHER[i] != '\0'){
+            NAME_TEMP = NAME_TEMP + OTHER[i];
+            i = i + 1;
+        }
+
+        NAME = NAME_TEMP;
+
+        cout << "RECORD " << j+1 << ": " << "ID: " << ID << "\n          REGION: " << REGION << "\n          STATE: " << STATE << "\n          CODE: " << CODE << "\n          VISITORS: " << VISITORS << "\n          TYPE: " << TYPE << "\n          NAME: " << NAME << endl << endl;
+    }
+
+    DinData.close();
 }
 
 void addRecord(){
