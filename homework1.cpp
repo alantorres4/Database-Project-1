@@ -601,6 +601,81 @@ void addRecord(){
     // Add the record at the database by overwriting a blank record
     // If there is no blank record at the required location (i.e. it's already been filled), the database is reorganized to reinsert blank records after each real record
     // You should NOT need to have more than one or two records in memory at a time to accomplish this
+
+    string newID = "TEST";
+    string newRegion = "TEST";
+    string newState = "TEST";
+    string newCode = "TEST";
+    string newVisitors = "TEST";
+    string newType = "TEST";
+    string newName = "TEST";
+
+    string currentLine = "";
+    string fields;
+    vector<string> FieldValues;
+
+    //get user input for new record
+    cout << "Please enter the new record with format: [ID] [Region] [State] [Code] [Visitors] [Type] [Name]\n";
+    cin.ignore();
+    getline(cin, currentLine);
+    vector<string> fieldsVector;
+    stringstream s(currentLine);
+
+
+    while(getline(s, fields, ' ')){
+        FieldValues.push_back(fields);
+    }
+
+    newID = FieldValues[0];
+    newRegion = FieldValues[1];
+    newState = FieldValues[2];
+    newCode = FieldValues[3];
+    newVisitors = FieldValues[4];
+    newType = FieldValues[5];
+    newName = FieldValues[6];
+
+    FieldValues.clear();
+
+    cout << "Checking if id in use...\n\n";
+    ID_RECORD = stoi(newID);
+    int recordNum = binarySearch(ID_RECORD);
+    MIDDLE_INT = recordNum;
+    DinData.open(csvDataFile);
+
+    //if record is not currently in use
+    if(recordNum == -1)
+    {
+        cout << ID << " does NOT exist yet"; 
+    
+        for(int i = 0; i < numberOfFiles*2; i++)
+        {
+            DinData.seekg(i*TOTAL_MAX, ios::beg);
+            DinData >> ID;
+            cout << endl << "ID = " << ID << endl;
+            if(stoi(newID) > stoi(ID))
+            {
+                int insert = binarySearch(stoi(ID));
+                padRecords(newID, newRegion, newState, newCode, newName, newType, newVisitors);
+                //FIX SEEK
+                DinDoutData.open(csvDataFile, ios::out|ios::in);
+                DinDoutData.seekp(2*insert * (1+TOTAL_MAX), ios::beg);
+                DinDoutData << newID << newRegion << newState << newCode << newVisitors << newType << "!" << newName;
+                break;
+
+
+                //TODO: If no blank space, rearrange file to add blanks
+            }
+        }
+        numberOfFiles = numberOfFiles + 1;
+    }
+    //if record is in use, tell user
+    else
+    {
+        cout << ID << " already exists";
+    }
+    
+    DinData.close();
+    DinDoutData.close();
 }
 
 void deleteRecord(){
@@ -609,6 +684,29 @@ void deleteRecord(){
     // Delete the record at the database
     // As records are deleted, they are logically removed from the file (most likely just marked as "missing")
     // The "missing" records should be removed when the file is reorganized while reinserting blank records
+
+    int deleteRecord;
+
+    cout << "Enter ID for record to delete: \n";
+    cin >> deleteRecord;
+
+    int recordNum = binarySearch(deleteRecord);
+    MIDDLE_INT = recordNum;
+
+    if(recordNum != 1)
+    {
+        //cout << "deleting record " << deleteRecord << endl;
+        DinDoutData.open(csvDataFile, ios::out | ios::in);
+        DinDoutData.seekp(2*MIDDLE_INT * (1+TOTAL_MAX), ios::beg);
+        DinDoutData << BLANK_RECORD << endl;
+        DinDoutData.close();
+        numberOfFiles = numberOfFiles - 1;
+    }
+    else
+    {
+        cout << "Record " << deleteRecord << " does not exist.";
+    }
+  
 }
 
 int main(){
