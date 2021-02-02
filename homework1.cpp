@@ -595,6 +595,64 @@ void createReport(){
     DinData.close();
 }
 
+void truncateValues(string &newID, string &newREGION, string &newSTATE, string &newCODE, string &newNAME, string &newTYPE, string &newVISITORS){
+        int tempInt = 0;
+        bool truncatedValues = false;
+
+        tempInt = ID_MAX - 1;
+        if(newID.length() > tempInt){
+            string temp = newID.substr(0, tempInt);
+            newID = temp;
+            truncatedValues = true;
+        }
+
+        tempInt = REGION_MAX - 1;
+        if(newREGION.length() > tempInt){
+            string temp = newREGION.substr(0, tempInt);
+            newREGION = temp;
+            truncatedValues = true;
+        }
+
+        tempInt = STATE_MAX - 1;
+        if(newSTATE.length() > tempInt){
+            string temp = newSTATE.substr(0, tempInt);
+            newSTATE = temp;
+            truncatedValues = true;
+        }
+
+        tempInt = CODE_MAX - 1;
+        if(newCODE.length() > tempInt){
+            string temp = newCODE.substr(0, tempInt);
+            newCODE = temp;
+            truncatedValues = true;
+        }
+
+        tempInt = VISITORS_MAX - 3;
+        if(newVISITORS.length() > tempInt){
+            string temp = newVISITORS.substr(0, tempInt);
+            newVISITORS = temp;
+            truncatedValues = true;
+        }
+
+        tempInt = TYPE_MAX - 3;
+        if(newTYPE.length() > tempInt){
+            string temp = newTYPE.substr(0, tempInt);
+            newTYPE = temp;
+            truncatedValues = true;
+        }
+
+        tempInt = NAMES_MAX - 2;
+        if(newNAME.length() > tempInt){
+            string temp = newNAME.substr(0, tempInt);
+            newNAME = temp;
+            truncatedValues = true;
+        }
+
+        if(truncatedValues)
+            cout << " - [Some value(s) have been truncated for being too long]\n";
+
+}
+
 void addRecord(){
     // TODO
     cout << "\n--adding record--\n";
@@ -610,31 +668,44 @@ void addRecord(){
     string newType = "TEST";
     string newName = "TEST";
 
-    string currentLine = "";
-    string fields;
-    vector<string> FieldValues;
+    bool notInteger = true;
 
     //get user input for new record
-    cout << "Please enter the new record with format: [ID] [Region] [State] [Code] [Visitors] [Type] [Name]\n";
-    cin.ignore();
-    getline(cin, currentLine);
-    vector<string> fieldsVector;
-    stringstream s(currentLine);
+    while(notInteger)
+    {
+        notInteger = false;
+        cout << "Please enter an integer for the ID: ";
+        cin >> newID;
 
-
-    while(getline(s, fields, ' ')){
-        FieldValues.push_back(fields);
+        for(int i=0; i<newID.length(); i++){
+            if( isdigit(newID[i]) == false){
+                notInteger = true;
+                break;
+            }
+        }
     }
 
-    newID = FieldValues[0];
-    newRegion = FieldValues[1];
-    newState = FieldValues[2];
-    newCode = FieldValues[3];
-    newVisitors = FieldValues[4];
-    newType = FieldValues[5];
-    newName = FieldValues[6];
+    cout << "Enter REGION value: ";
+    cin >> newRegion;
 
-    FieldValues.clear();
+    cout << "Enter STATE value: ";
+    cin >> newState;
+
+    cout << "Enter CODE value: ";
+    cin >> newCode;
+
+    cout << "Enter VISITORS value: ";
+    cin >> newVisitors;
+
+    cout << "Enter TYPE value: ";
+    cin.ignore();
+    getline(cin, newType);
+
+    cout << "Enter NAME value: ";
+    cin.ignore();
+    getline(cin, newName);
+
+    truncateValues(newID, newRegion, newState, newCode, newName, newType, newVisitors);
 
     cout << "Checking if id in use...\n\n";
     ID_RECORD = stoi(newID);
@@ -642,31 +713,73 @@ void addRecord(){
     MIDDLE_INT = recordNum;
     DinData.open(csvDataFile);
 
+    int previousIndex = 0;
+    bool previousRecordIsBlank = false;
+    bool addedAlready = false;
+    string wholeRecord;
+
     //if record is not currently in use
     if(recordNum == -1)
     {
-        cout << ID << " does NOT exist yet"; 
-    
+        cout << newID << " does NOT exist yet";
+        padRecords(newID, newRegion, newState, newCode, newName, newType, newVisitors);
+
         for(int i = 0; i < numberOfFiles*2; i++)
         {
-            DinData.seekg(i*TOTAL_MAX, ios::beg);
-            DinData >> ID;
-            cout << endl << "ID = " << ID << endl;
-            if(stoi(newID) > stoi(ID))
-            {
-                int insert = binarySearch(stoi(ID));
-                padRecords(newID, newRegion, newState, newCode, newName, newType, newVisitors);
-                //FIX SEEK
-                DinDoutData.open(csvDataFile, ios::out|ios::in);
-                DinDoutData.seekp(2*insert * (1+TOTAL_MAX), ios::beg);
-                DinDoutData << newID << newRegion << newState << newCode << newVisitors << newType << "!" << newName;
+            if(addedAlready)
                 break;
 
+//          cout << "INSIDE FOR LOOP i: " << i << endl;
+            DinData.seekg(i*(TOTAL_MAX+1), ios::beg);
+            getline(DinData, wholeRecord); // instead of taking in just ID, I need to use getine() in order for it to also recognize BLANK_RECORDS
 
-                //TODO: If no blank space, rearrange file to add blanks
+            // here we separate our ID from our getline reading
+            ID = "";
+            for(int j=0; j<ID_MAX; j++){
+                if(wholeRecord[j] != ' ')
+                    ID = ID + wholeRecord[j];
+            }
+
+            // also check if we just grabbed a BLANK_RECORD
+            if(wholeRecord == BLANK_RECORD)
+            {
+                // don't do anything, just grab the index and go to the next i iteration
+                cout << " - BLANK RECORD \n";
+                previousIndex = i;
+                previousRecordIsBlank = true;
+            }
+            else{ // otherwise its a real record and we check stuff
+                cout << endl << "ID = " << ID << endl;
+
+                // if our newID is larger than the ID we just got, we have to keep moving up until our newID is < ID
+                if(stoi(newID) > stoi(ID))
+                {
+                    // do nothing, maybe get the temp index?
+                    previousIndex = i;
+                    previousRecordIsBlank = false;
+                }
+                else
+                {
+
+                addedAlready = true;
+                    // now we've gone too far so we should insert our newID and the other data in the previous line
+                    // currently, our index points to the record (real or blank) before this, so we can simply check if the spot is blank and insert
+                    // if not blank, do some wacky stuff
+//                  cout << " - - check if previous blank\n";
+                    if(previousRecordIsBlank){
+                        cout << " ++++++++++++++++++ ADDING FILE \n";
+                        DinDoutData.open(csvDataFile, ios::out | ios::in);
+                        DinDoutData.seekp(previousIndex*(1+TOTAL_MAX), ios::beg);
+                        DinDoutData << newID << newRegion << newState << newCode << newVisitors << newType << "!" << newName;
+                        DinDoutData.close();
+
+                        numberOfFiles = numberOfFiles + 1;
+                        addedAlready = true;
+                    }
+
+                }
             }
         }
-        numberOfFiles = numberOfFiles + 1;
     }
     //if record is in use, tell user
     else
