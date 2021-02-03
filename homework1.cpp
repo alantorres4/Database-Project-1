@@ -3,6 +3,8 @@
 #include<sstream>
 #include<string>
 #include<vector>
+#include<cstdio>
+#include<cstdlib>
 
 using namespace std;
 
@@ -19,6 +21,7 @@ ifstream DinTest;
 ifstream DinData;
 string OTHER;
 ofstream DinDoutData;
+ofstream DoutTest;
 
 
 string csvConfigFile;
@@ -776,6 +779,48 @@ void addRecord(){
                         numberOfFiles = numberOfFiles + 1;
                         addedAlready = true;
                     }
+                    else
+                    {
+                        cout << "rearranging files...\n\n";
+                        //need to rearrange file to add blank spaces after each record
+                        string tempFile = "Temp.data";
+                        string tempLine;
+                        int tempNumberOfFiles = 0;
+                        DoutTest.open(tempFile);
+                        int j = 0;
+                        while(!DinData.eof() && j <= numberOfFiles)
+                        {
+                            //used the seek from earlier to get each line
+                            DinData.seekg(j*(TOTAL_MAX+1), ios::beg);
+                            getline(DinData, tempFile);                            
+                            //cout << tempLine << endl;
+                            if(tempLine != BLANK_RECORD)
+                            {
+                                //insert line we got from .data file to temp and add blank
+                                //after each record
+                                //maybe this isn't the right way?
+                                DoutTest << tempLine << endl << BLANK_RECORD << endl;
+                                tempNumberOfFiles = tempNumberOfFiles + 1;
+                                tempLine = "";
+                            }
+                            //if it is a blank line, don't deal with it
+                            else
+                            {
+                                tempLine = "";
+                            }
+                            j++;
+                        }
+                        cout << "done transferring, now renaming\n\n";
+                        //have to close the files before renaming i think, could be wrong
+                        DinDoutData.close();
+                        DoutTest.close();
+                        //trying to remove old .data and rename temp to the new .data
+                        remove(csvDataFile.c_str());
+                        rename(tempFile.c_str(), csvDataFile.c_str());
+                        DinDoutData.open(csvDataFile);
+                        cout << "Finished rearranging\n\n";
+                    }
+                    
 
                 }
             }
