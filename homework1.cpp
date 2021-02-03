@@ -302,9 +302,6 @@ bool getRecord(ifstream &DinData, int ID_RECORD, const int middle, string &middl
     string NAME_TEMP;
     OTHER = "";
 
-
-    // to skip the blank records, we have to do ID_RECORD*2 - 1
-//    ID_RECORD = ID_RECORD*2- 1;
     if((0 <= middle) && (middle < numberOfFiles)){
         DinData.seekg(2*middle * (TOTAL_MAX+1), ios::beg);
 
@@ -332,7 +329,6 @@ bool getRecord(ifstream &DinData, int ID_RECORD, const int middle, string &middl
         }
 
         NAME = NAME_TEMP;
-
 //      cout << "      MIDDLE: " << middle << endl;
 //      cout << "      ID = " << ID << "\n      REGION = " << REGION << "\n      STATE = " << STATE << "\n      CODE = " << CODE << "\n      VISITORS = " << VISITORS << "\n      TYPE" << TYPE << "\n     $
         middleID = ID;
@@ -721,6 +717,8 @@ void addRecord(){
     bool addedAlready = false;
     string wholeRecord;
 
+    bool insideAddedAlready = false;
+
     //if record is not currently in use
     if(recordNum == -1)
     {
@@ -764,7 +762,7 @@ void addRecord(){
                 else
                 {
 
-                addedAlready = true;
+                    addedAlready = true;
                     // now we've gone too far so we should insert our newID and the other data in the previous line
                     // currently, our index points to the record (real or blank) before this, so we can simply check if the spot is blank and insert
                     // if not blank, do some wacky stuff
@@ -776,23 +774,23 @@ void addRecord(){
                         DinDoutData << newID << newRegion << newState << newCode << newVisitors << newType << "!" << newName;
                         DinDoutData.close();
 
-                        numberOfFiles = numberOfFiles + 1;
                         addedAlready = true;
                     }
-                    else
+                    else 
                     {
                         cout << "rearranging files...\n\n";
                         //need to rearrange file to add blank spaces after each record
                         string tempFile = "Temp.data";
                         string tempLine;
                         int tempNumberOfFiles = 0;
-                        DoutTest.open(tempFile);
+                        DoutTest.open(tempFile, ios:: out | ios::app);
                         int j = 0;
-                        while(!DinData.eof() && j <= numberOfFiles)
+                        while(!DinData.eof() && (j <= (2*numberOfFiles)))
                         {
+                           //cout << " + + + + +  INSIDE WHILE: j = " << j << endl;
                             //used the seek from earlier to get each line
                             DinData.seekg(j*(TOTAL_MAX+1), ios::beg);
-                            getline(DinData, tempFile);                            
+                            getline(DinData, tempLine);                            
                             //cout << tempLine << endl;
                             if(tempLine != BLANK_RECORD)
                             {
@@ -815,23 +813,24 @@ void addRecord(){
                         DinDoutData.close();
                         DoutTest.close();
                         //trying to remove old .data and rename temp to the new .data
-                        remove(csvDataFile.c_str());
-                        rename(tempFile.c_str(), csvDataFile.c_str());
-                        DinDoutData.open(csvDataFile);
+                        // remove(csvDataFile.c_str());
+                        int test = rename(tempFile.c_str(), csvDataFile.c_str());
+                        DinDoutData.open(csvDataFile, ios::out | ios::in);
                         cout << "Finished rearranging\n\n";
-                    }
-                    
 
+
+                        // we find the available spot again since the rearranging messed up the index
+                    }
                 }
             }
         }
     }
-    //if record is in use, tell user
     else
     {
         cout << ID << " already exists";
     }
     
+    numberOfFiles = numberOfFiles + 1;
     DinData.close();
     DinDoutData.close();
 }
